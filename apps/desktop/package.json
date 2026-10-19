@@ -1,0 +1,89 @@
+{
+  "name": "@pvh/desktop",
+  "version": "0.8.0",
+  "private": true,
+  "description": "PVH Omnichannel Manager — Windows desktop",
+  "author": "PVH Media",
+  "main": "out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "typecheck": "tsc -p tsconfig.json",
+    "postinstall": "node ../../scripts/verify-native.cjs",
+    "native:rebuild": "electron-builder install-app-deps",
+    "pack:win": "electron-builder --win --x64 --dir",
+    "dist:win": "electron-builder --win nsis --x64"
+  },
+  "dependencies": {
+    "@pvh/shared": "workspace:*",
+    "@radix-ui/react-alert-dialog": "1.2.1",
+    "@radix-ui/react-slot": "^1.2.3",
+    "@tanstack/react-query": "5.104.4",
+    "better-sqlite3": "13.0.3",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "1.59.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "sonner": "2.0.8",
+    "tailwind-merge": "^3.3.0",
+    "zca-js": "2.2.0",
+    "zod": "4.6.7",
+    "zustand": "5.0.15"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.3.3",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "electron": "44.9.0",
+    "electron-builder": "26.15.3",
+    "electron-vite": "6.0.0",
+    "tailwindcss": "4.3.3",
+    "vite": "8.3.4"
+  },
+  "build": {
+    "appId": "com.pvhmedia.omnichannel",
+    "productName": "PVH Omnichannel Manager",
+    "directories": {
+      "output": "../../dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "out/**/*",
+      "assets/icon.png",
+      "package.json",
+      "!node_modules/better-sqlite3/prebuilds/{darwin*,linux*,win32-arm64*}",
+      "!node_modules/better-sqlite3/deps/**/*"
+    ],
+    "asar": true,
+    "asarUnpack": [
+      "**/*.node"
+    ],
+    "npmRebuild": true,
+    "beforePack": "build/before-pack.cjs",
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "PVH-Omnichannel-Manager-Setup-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "PVH Omnichannel Manager",
+      "runAfterFinish": true
+    }
+  }
+}

@@ -1,0 +1,53 @@
+# Dependencies and generated builds
+node_modules/
+out/
+dist/
+release/
+*.tsbuildinfo
+
+# Local reports, test output and logs
+coverage/
+test-results/
+playwright-report/
+artifacts/
+/phase*-audit.json
+/phase*-signature.json
+*.log
+*.log.*
+
+# Local databases, backups and runtime state
+*.db*
+*.sqlite*
+backups/
+user-data/
+.wrangler/
+
+# Secrets: only explicit configuration templates may be committed
+.env*
+!.env.example
+!.env.*.example
+.dev.vars*
+!.dev.vars.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+credentials.json
+service-account*.json
+*.service-account.json
+sessions/
+cookies.json
+tokens.json
+
+# Installers, archives and machine-local files
+*.exe
+*.msi
+*.msix
+*.appx
+*.zip
+*.7z
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

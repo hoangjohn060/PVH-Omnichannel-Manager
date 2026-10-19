@@ -1,0 +1,33 @@
+import { describe, it, expect } from 'vitest';
+import Database from 'better-sqlite3';
+import type { Message } from 'zca-js';
+import { Zalo, LoginQRCallbackEventType, ThreadType } from 'zca-js';
+import { migrations } from '../../apps/desktop/electron/database/migrations';
+import { saveZaloMessage, zaloDatabaseOperation } from '../../apps/desktop/electron/database/zalo-repository';
+import { transition, backoff, classifyError } from '../../apps/desktop/electron/zalo/state';
+import { normalizeMessage, pngDataUrl, sentMessageId } from '../../apps/desktop/electron/zalo/mapping';
+import { fetchAvatarData } from '../../apps/desktop/electron/zalo/avatar';
+import { parseIpc } from '../../packages/shared/schemas';
+const raw = (self = false): Message => ({ type: ThreadType.User, threadId: '12345', isSelf: self, data: { msgId: '98765', uidFrom: '222', dName: 'Khách hàng', content: 'Xin chào Việt Nam 🇻🇳', ts: '1792340000000', msgType: 'webchat' } } as Message);
+function database() { const db = new Database(':memory:'); db.pragma('foreign_keys=ON'); for (const m of migrations) db.exec(m.sql); for (const id of ['a', 'b']) db.prepare('INSERT INTO zalo_accounts(id,label,owner_id) VALUES (?,?,?)').run(id, id, 'owner'); return db; }
+describe('zca-js installed API compatibility (not live authentication)', () => {
+  it('exports QR callback enums and required methods', () => { const sdk = new Zalo({ logging: false, checkUpdate: false }); expect(typeof sdk.loginQR).toBe('function'); expect(typeof sdk.login).toBe('function'); expect(LoginQRCallbackEventType.QRCodeGenerated).toBe(0); expect(LoginQRCallbackEventType.GotLoginInfo).toBe(4); });
+});
+describe('QR state machine', () => {
+  it('follows scan, phone confirmation, authentication and connected', () => { let state = transition('DISCONNECTED', 'generate'); state = transition(state, 'qr'); state = transition(state, 'wait'); state = transition(state, 'scan'); state = transition(state, 'credentials'); expect(transition(state, 'connected')).toBe('CONNECTED'); });
+  it('never pretends QR generation means connected', () => { expect(() => transition('QR_GENERATING', 'connected')).toThrow(); expect(() => transition('WAITING_SCAN', 'credentials')).toThrow(); });
+  it('supports expiry, new QR and cancellation', () => { expect(transition('WAITING_SCAN', 'expired')).toBe('EXPIRED'); expect(transition('EXPIRED', 'generate')).toBe('QR_GENERATING'); expect(transition('AUTHENTICATING', 'stop')).toBe('DISCONNECTED'); });
+  it('bounds reconnect backoff and stops after five attempts', () => { expect([0,1,2,3,4].map(backoff)).toEqual([5000,15000,45000,120000,300000]); expect(backoff(5)).toBeNull(); });
+  it('distinguishes expired session from network/proxy failure', () => { expect(classifyError(new Error('session expired'))).toBe('AUTH_EXPIRED'); expect(classifyError(new Error('fetch failed'))).toBe('NETWORK'); expect(classifyError(new Error('407 proxy authentication'))).toBe('NETWORK'); });
+  it('rejects SVG or non-image QR payloads', () => { expect(() => pngDataUrl('data:image/svg+xml;base64,PHN2Zz4=')).toThrow(); expect(() => pngDataUrl('YWJj')).toThrow(); });
+});
+describe('Message normalization, account isolation and deduplication', () => {
+  it('preserves Unicode, external ids, timestamps and unknown agent', () => { expect(normalizeMessage('a', raw())).toMatchObject({ accountId: 'a', messageId: '98765', threadId: '12345', text: 'Xin chào Việt Nam 🇻🇳', timestamp: 1792340000000, agentId: null, status: 'RECEIVED' }); });
+  it('normalizes supported image/file metadata without fetching content', () => { const image = raw(); image.data.msgType = 'chat.photo'; image.data.content = { title: 'Ảnh', href: 'https://example.com/a.png' }; expect(normalizeMessage('a', image)).toMatchObject({ kind: 'image', attachment: { url: 'https://example.com/a.png', name: 'Ảnh' } }); image.data.msgType = 'share.file'; expect(normalizeMessage('a', image).kind).toBe('file'); });
+  it('upserts duplicate inbound and keeps identical IDs isolated by account', () => { const db = database(); const a = normalizeMessage('a', raw()); saveZaloMessage(db, a); saveZaloMessage(db, a); saveZaloMessage(db, { ...a, accountId: 'b', text: 'Tài khoản B' }); expect(db.prepare('SELECT COUNT(*) AS n FROM zalo_messages').get()).toEqual({ n: 2 }); expect(db.prepare('SELECT COUNT(*) AS n FROM zalo_gateway_outbox').get()).toEqual({ n: 2 }); expect(zaloDatabaseOperation(db, 'zalo:messages', { accountId: 'a', threadId: '12345' })).toEqual([a]); db.close(); });
+  it('does not forward self-message echoes to gateway outbox or regress delivery', () => { const db = database(); const self = normalizeMessage('a', raw(true)); saveZaloMessage(db, { ...self, status: 'SEEN' }); saveZaloMessage(db, self); expect(db.prepare('SELECT COUNT(*) AS n FROM zalo_gateway_outbox').get()).toEqual({ n: 0 }); expect(zaloDatabaseOperation(db, 'zalo:messages', { accountId: 'a', threadId: '12345' })).toMatchObject([{ status: 'SEEN', agentId: null }]); db.close(); });
+  it('accepts outbound only with a real SDK message id', () => { expect(sentMessageId({ message: { msgId: 123 }, attachment: [] })).toBe('123'); expect(() => sentMessageId({ message: null, attachment: [] })).toThrow('SEND_NO_MESSAGE_ID'); });
+  it('durably claims outbound idempotency key once and recovers ambiguous sends', () => { const db = database(); const input = { accountId: 'a', threadId: '12345', threadType: 0, text: 'Xin chào', requestId: 'request' }; expect(zaloDatabaseOperation(db, 'zalo:outbound-begin', input)).toMatchObject({ inserted: true }); expect(zaloDatabaseOperation(db, 'zalo:outbound-begin', input)).toMatchObject({ inserted: false }); zaloDatabaseOperation(db, 'zalo:recover-outbound', {}); expect(zaloDatabaseOperation(db, 'zalo:failures', {})).toMatchObject([{ status: 'UNKNOWN', attempts: 1 }]); db.close(); });
+  it('rejects secret/session injection through renderer IPC', () => { expect(() => parseIpc('zalo:action', { accountId: crypto.randomUUID(), action: 'reconnect', cookie: 'secret' })).toThrow(); expect(() => parseIpc('zalo:send', { accountId: crypto.randomUUID(), threadId: '../file', threadType: 0, text: 'hi', requestId: crypto.randomUUID() })).toThrow(); });
+  it('does not fetch arbitrary/private avatar URLs', async () => { expect(await fetchAvatarData('http://127.0.0.1/secret')).toBeNull(); expect(await fetchAvatarData('https://evil.test/avatar.png')).toBeNull(); });
+});

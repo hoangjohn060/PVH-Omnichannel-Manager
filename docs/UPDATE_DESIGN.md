@@ -1,0 +1,7 @@
+# Optional update module — design only
+
+Status: NOT IMPLEMENTED / disabled. No auto-updater dependency, feed or automatic binary download is enabled in 0.8.0. Current updates are administrator-distributed installers.
+
+Before implementation, the deployment operator must own an allowlisted HTTPS update endpoint and signing identity. Configure the endpoint in controlled main-process deployment configuration, not in message content or arbitrary renderer input. Reject non-HTTPS origins, cross-origin redirects, invalid certificates and version downgrades. Require an authenticated/signed manifest containing version, architecture, size and SHA256, and verify the downloaded file against the manifest and the expected Authenticode publisher before offering installation. A hash downloaded from the same compromised origin without a trusted signature is not sufficient authenticity.
+
+Download only after explicit policy/consent; stage outside application resources, use bounded download size/timeouts, and never execute an unverified file. Back up the database before upgrade, gracefully stop connectors/DB workers and close SQLite. Preserve userData; validate schema migration and rollback strategy on copies first. Log only version/status, never tokens. Signing keys stay in a protected release environment, never source code. Mandatory acceptance includes tampered manifest/binary, bad TLS, redirect, downgrade, offline, interrupted update, migration failure and Windows 10/11 install/upgrade lifecycle tests. No SmartScreen/Defender bypass is permitted.

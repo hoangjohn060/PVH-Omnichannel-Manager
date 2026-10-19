@@ -1,0 +1,5 @@
+import * as Dialog from '@radix-ui/react-alert-dialog';
+import { Button } from './button';
+export function ConfirmDialog({ trigger, title, description, onConfirm }: { trigger: React.ReactNode; title: string; description: string; onConfirm: () => void }) {
+  return <Dialog.Root><Dialog.Trigger asChild>{trigger}</Dialog.Trigger><Dialog.Portal><Dialog.Overlay className="fixed inset-0 z-40 bg-black/45"/><Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-panel p-6 shadow-xl"><Dialog.Title className="text-lg font-semibold">{title}</Dialog.Title><Dialog.Description className="my-4 text-sm text-subtle">{description}</Dialog.Description><div className="flex justify-end gap-2"><Dialog.Cancel asChild><Button variant="outline">Hủy</Button></Dialog.Cancel><Dialog.Action asChild><Button onClick={onConfirm}>Xác nhận</Button></Dialog.Action></div></Dialog.Content></Dialog.Portal></Dialog.Root>;
+}

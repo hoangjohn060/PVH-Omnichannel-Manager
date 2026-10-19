@@ -1,0 +1,37 @@
+{
+  "name": "zca-bridge",
+  "version": "1.0.4",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/main.js",
+    "dev": "tsx watch src/main.ts",
+    "migrate": "tsx src/store/migrate.ts",
+    "check:no-pro": "tsx scripts/checkNoPro.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@fastify/static": "^9.1.3",
+    "fastify": "^5.2.0",
+    "https-proxy-agent": "^9.1.0",
+    "node-fetch": "^3.3.2",
+    "pg": "^8.13.0",
+    "pino": "^10.3.1",
+    "sharp": "^0.33.5",
+    "socks-proxy-agent": "^10.1.0",
+    "undici": "^7.0.0",
+    "zca-js": "2.1.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/pg": "^8.11.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.8"
+  }
+}

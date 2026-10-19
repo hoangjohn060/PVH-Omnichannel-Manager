@@ -1,0 +1,1 @@
+export const desktopEvents = { navigate: 'desktop:navigate' } as const;

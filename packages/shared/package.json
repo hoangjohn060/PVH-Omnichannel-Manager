@@ -1,0 +1,1 @@
+{"name":"@pvh/shared","private":true,"version":"0.1.0","type":"module","exports":{"./types":"./types/index.ts","./types/facebook":"./types/facebook.ts","./types/inbox":"./types/inbox.ts","./types/sheets":"./types/sheets.ts","./schemas":"./schemas/index.ts","./events":"./events/index.ts","./adapters":"./adapters/index.ts"},"dependencies":{"zod":"4.6.7"}}

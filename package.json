@@ -1,0 +1,31 @@
+{
+  "name": "pvh-omnichannel",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.34.7",
+  "scripts": {
+    "dev": "pnpm --filter @pvh/desktop dev",
+    "build": "pnpm --filter @pvh/desktop build",
+    "typecheck": "pnpm --filter @pvh/desktop typecheck && pnpm --filter @pvh/gateway typecheck && tsc -p tests/tsconfig.json",
+    "test": "vitest run",
+    "test:e2e": "pnpm build && playwright test",
+    "test:dev": "node scripts/dev-smoke.cjs",
+    "test:zalo:qr": "pnpm build && cross-env PVH_LIVE_QR=1 playwright test tests/e2e/zalo.spec.ts --grep \"LIVE SDK\"",
+    "test:zalo:qr:packaged": "cross-env PVH_LIVE_QR=1 PVH_PACKAGED=1 playwright test tests/e2e/zalo.spec.ts --grep \"LIVE SDK\"",
+    "test:packaged": "cross-env PVH_PACKAGED=1 playwright test",
+    "pack:win": "pnpm build && pnpm --filter @pvh/desktop pack:win",
+    "dist:win": "pnpm build && pnpm --filter @pvh/desktop dist:win",
+    "test:gateway": "vitest run --config vitest.gateway.config.ts",
+    "lint": "eslint apps packages tests --max-warnings 0"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.5",
+    "@playwright/test": "1.64.1",
+    "@types/node": "^24.0.0",
+    "cross-env": "^10.1.0",
+    "eslint": "9.39.5",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.71.2",
+    "vitest": "^4.0.18"
+  }
+}

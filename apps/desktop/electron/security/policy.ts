@@ -1,0 +1,4 @@
+export function isTrustedRenderer(url: string, rendererUrl: string): boolean {
+  try { const current = new URL(url); const expected = new URL(rendererUrl); return !current.username && !current.password && current.protocol === expected.protocol && current.host === expected.host && current.origin === expected.origin && current.pathname === expected.pathname && current.search === expected.search; } catch { return false; }
+}
+export const productionCsp = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; frame-ancestors 'none'";
